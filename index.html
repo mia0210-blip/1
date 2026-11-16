@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✊✋✌️ 剪刀石頭布：RPG 冒險者終極大對決</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Google Fonts (Inter 與 Noto Sans TC 與 JetBrains Mono 程式碼字體) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 自訂 RPG 奇幻風格樣式與動畫 */
+        body {
+            font-family: 'Noto Sans TC', 'Inter', sans-serif;
+            background-color: #0b0f19;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(245, 158, 11, 0.12) 0%, transparent 40%);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .font-mono-code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 金色奇幻發光邊框 */
+        .rpg-card {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.1), inset 0 0 15px rgba(6, 182, 212, 0.05);
+        }
+
+        /* 青色系統廣播框 */
+        .system-broadcast {
+            background: linear-gradient(135deg, rgba(8, 47, 73, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border-left: 4px solid #06b6d4;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.15);
+        }
+
+        /* 出拳按鈕特效 */
+        .rps-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 2px solid rgba(6, 182, 212, 0.4);
+        }
+        .rps-btn:hover:not(:disabled) {
+            transform: translateY(-6px) scale(1.03);
+            border-color: #f59e0b;
+            box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.4);
+        }
+        .rps-btn:active:not(:disabled) {
+            transform: translateY(0) scale(0.97);
+        }
+        .rps-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 搖晃動畫 (對決瞬間) */
+        @keyframes battleShake {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-12px) rotate(-8deg); }
+            50% { transform: translateY(0) rotate(0deg); }
+            75% { transform: translateY(-12px) rotate(8deg); }
+        }
+        .animate-shake {
+            animation: battleShake 0.45s ease-in-out;
+        }
+
+        /* 淡入上浮動畫 */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeInUp 0.4s ease-out forwards;
+        }
+
+        /* 自訂捲軸 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-4 sm:p-6 md:p-8">
+
+    <!-- 頂部導覽與 Python 原始碼對照按鈕 -->
+    <header class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">⚔️</span>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-cyan-300">
+                    Python 冒險試煉場
+                </h1>
+                <p class="text-xs text-slate-400">練習03：與電腦猜拳大對決</p>
+            </div>
+        </div>
+
+        <!-- 查看原始題目與參考解答按鈕 -->
+        <button id="openCodeModalBtn" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50 transition text-sm font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            <span>查看原始 Python 題目與參考解答</span>
+        </button>
+    </header>
+
+    <!-- 主要遊戲容器 -->
+    <main class="w-full max-w-4xl flex-grow flex flex-col justify-center">
+
+        <!-- ==========================================
+             階段一：冒險者登入畫面
+             ========================================== -->
+        <section id="stageLogin" class="rpg-card rounded-2xl p-6 sm:p-10 max-w-xl mx-auto w-full animate-fade-in">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-400/40 text-4xl mb-4 shadow-inner">
+                    🛡️
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-amber-300 mb-2">冒險者公會報到處</h2>
+                <p class="text-slate-400 text-sm sm:text-base">請填寫你的基本資料與裝備，準備迎接第一關的挑戰！</p>
+            </div>
+
+            <!-- 錯誤提示訊息框 (取代 alert) -->
+            <div id="loginErrorMsg" class="hidden mb-5 p-3.5 rounded-xl bg-rose-950/80 border border-rose-500/60 text-rose-200 text-sm flex items-center gap-2">
+                <span>⚠️</span>
+                <span id="loginErrorText">請輸入冒險者名字與裝備！</span>
+            </div>
+
+            <form id="loginForm" class="space-y-6">
+                <!-- 輸入框 1：變數 name -->
+                <div>
+                    <label for="adventurerName" class="block text-sm font-semibold text-cyan-300 mb-2">
+                        請輸入你的冒險者名字：
+                    </label>
+                    <input type="text" id="adventurerName" placeholder="例如：亞瑟、星爆氣流斬..." maxlength="20"
+                        class="w-full px-4 py-3.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 text-white placeholder-slate-500 outline-none transition">
+                </div>
+
+                <!-- 輸入框 2：變數 equipment -->
+                <div>
+                    <label for="adventurerEquipment" class="block text-sm font-semibold text-cyan-300 mb-2">
+                        請選擇你的使用裝備（例如：黃金鍵盤、魔法魔杖）：
+                    </label>
+                    <input type="text" id="adventurerEquipment" placeholder="例如：黃金鍵盤、魔法魔杖、聖劍..." maxlength="25"
+                        class="w-full px-4 py-3.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 text-white placeholder-slate-500 outline-none transition">
+                    
+                    <!-- 快速裝備建議標籤 -->
+                    <div class="flex flex-wrap gap-2 mt-2.5">
+                        <span class="text-xs text-slate-400 self-center">快速選擇：</span>
+                        <button type="button" class="quick-equip text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-amber-300 border border-slate-700 hover:border-amber-400/50 transition">⌨️ 黃金鍵盤</button>
+                        <button type="button" class="quick-equip text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-amber-300 border border-slate-700 hover:border-amber-400/50 transition">🪄 魔法魔杖</button>
+                        <button type="button" class="quick-equip text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-amber-300 border border-slate-700 hover:border-amber-400/50 transition">🖱️ 雷射滑鼠</button>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full py-4 rounded-xl font-bold text-lg text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/25 transform hover:-translate-y-0.5 transition cursor-pointer">
+                    ⚔️ 開始冒險
+                </button>
+            </form>
+        </section>
+
+        <!-- ==========================================
+             階段二與階段三：猜拳大對決 & 最終結算
+             ========================================== -->
+        <section id="stageBattle" class="hidden space-y-6 animate-fade-in">
+
+            <!-- 系統廣播區塊 -->
+            <div class="system-broadcast rounded-2xl p-4 sm:p-5">
+                <div class="flex items-center gap-2 text-cyan-400 font-bold text-sm uppercase tracking-wider mb-1.5">
+                    <span>📢 === 系統廣播 ===</span>
+                </div>
+                <p id="broadcastMessage" class="text-slate-100 text-sm sm:text-base leading-relaxed">
+                    <!-- 由 JS 動態填入歡迎詞 -->
+                </p>
+            </div>
+
+            <!-- 主戰場卡片 -->
+            <div class="rpg-card rounded-2xl p-5 sm:p-8">
+                <!-- 標題與規則 -->
+                <div class="text-center border-b border-slate-700/80 pb-4 mb-6">
+                    <h2 class="text-xl sm:text-2xl font-black text-amber-300 tracking-wide">
+                        === ✊✋✌️ 剪刀石頭布 終極大對決 ===
+                    </h2>
+                    <p class="text-cyan-300/90 text-sm mt-1">
+                        規則：先獲得 <span class="font-bold text-amber-400 underline">3 勝</span> 的一方就是最終贏家！
+                    </p>
+                </div>
+
+                <!-- 回合數與即時戰況計分板 -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/80 rounded-2xl p-4 border border-slate-800 mb-6">
+                    <!-- 回合徽章 -->
+                    <div class="px-4 py-1.5 rounded-xl bg-amber-500/15 border border-amber-400/40 text-amber-300 font-bold text-base">
+                        --- 第 <span id="roundDisplay">1</span> 回合 ---
+                    </div>
+
+                    <!-- 戰況計分板 -->
+                    <div class="flex items-center gap-4 sm:gap-6 text-base sm:text-lg font-bold">
+                        <div class="flex items-center gap-2">
+                            <span class="text-cyan-400">🏆 你 (<span id="scoreboardName" class="max-w-[90px] truncate inline-block align-bottom">玩家</span>)：</span>
+                            <span id="playerWinsDisplay" class="text-2xl text-amber-300">0</span>
+                            <span class="text-sm text-slate-400">勝</span>
+                        </div>
+                        <span class="text-slate-600">|</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-rose-400">🤖 電腦：</span>
+                            <span id="computerWinsDisplay" class="text-2xl text-rose-400">0</span>
+                            <span class="text-sm text-slate-400">勝</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 雙方出拳動畫展示區 -->
+                <div class="grid grid-cols-3 items-center gap-2 sm:gap-6 my-6 py-4 px-2 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+                    <!-- 玩家出拳 -->
+                    <div class="flex flex-col items-center text-center">
+                        <span class="text-xs sm:text-sm text-cyan-300 font-semibold mb-2" id="arenaPlayerLabel">冒險者</span>
+                        <div id="playerHandBox" class="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-slate-900 border-2 border-cyan-500/40 flex items-center justify-center text-4xl sm:text-6xl shadow-lg">
+                            ❓
+                        </div>
+                        <span id="playerHandText" class="mt-2 text-xs sm:text-sm font-bold text-slate-300">等待出拳</span>
+                    </div>
+
+                    <!-- VS 與單回合結果提示 -->
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <span class="text-2xl sm:text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-amber-300 to-rose-500">
+                            VS
+                        </span>
+                        <div id="roundResultBadge" class="mt-3 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 text-slate-300 min-h-[36px] flex items-center justify-center">
+                            請選擇下方招式！
+                        </div>
+                    </div>
+
+                    <!-- 電腦出拳 -->
+                    <div class="flex flex-col items-center text-center">
+                        <span class="text-xs sm:text-sm text-rose-400 font-semibold mb-2">🤖 電腦魔王</span>
+                        <div id="computerHandBox" class="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-slate-900 border-2 border-rose-500/40 flex items-center justify-center text-4xl sm:text-6xl shadow-lg">
+                            🤖
+                        </div>
+                        <span id="computerHandText" class="mt-2 text-xs sm:text-sm font-bold text-slate-300">蓄勢待發</span>
+                    </div>
+                </div>
+
+                <!-- 階段二操作區：出拳按鈕 (對決進行中顯示) -->
+                <div id="actionButtonsArea" class="space-y-3">
+                    <p class="text-center text-sm text-slate-400">請出拳（點擊下方按鈕）：</p>
+                    <div class="grid grid-cols-3 gap-3 sm:gap-5 max-w-lg mx-auto">
+                        <button type="button" data-choice="剪刀" class="rps-btn rounded-2xl py-4 sm:py-5 px-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer">
+                            <span class="text-3xl sm:text-4xl">✌️</span>
+                            <span class="font-bold text-base sm:text-lg text-amber-200">剪刀</span>
+                        </button>
+                        <button type="button" data-choice="石頭" class="rps-btn rounded-2xl py-4 sm:py-5 px-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer">
+                            <span class="text-3xl sm:text-4xl">✊</span>
+                            <span class="font-bold text-base sm:text-lg text-amber-200">石頭</span>
+                        </button>
+                        <button type="button" data-choice="布" class="rps-btn rounded-2xl py-4 sm:py-5 px-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer">
+                            <span class="text-3xl sm:text-4xl">✋</span>
+                            <span class="font-bold text-base sm:text-lg text-amber-200">布</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 階段三結算區：最終結果畫面 (任一方達到 3 勝時顯示) -->
+                <div id="finalResultArea" class="hidden mt-6 p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400/70 text-center space-y-4 animate-fade-in">
+                    <div class="text-amber-300 font-black text-lg sm:text-xl tracking-wider">
+                        === 🌟 最終結果 🌟 ===
+                    </div>
+                    <p id="finalResultMessage" class="text-base sm:text-xl font-bold text-white leading-relaxed">
+                        <!-- 由 JS 動態填入勝利或失敗台詞 -->
+                    </p>
+                    <div class="pt-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+                        <button id="restartSamePlayerBtn" class="px-6 py-3 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/20 transition cursor-pointer">
+                            🔄 重新挑戰（保留角色）
+                        </button>
+                        <button id="resetAllBtn" class="px-5 py-3 rounded-xl font-semibold text-cyan-300 bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 transition cursor-pointer">
+                            🛡️ 重新設定冒險者資料
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 歷史對戰紀錄日誌 (終端機風格) -->
+            <div class="rpg-card rounded-2xl p-4 sm:p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <h3 class="text-xs sm:text-sm font-mono-code font-semibold text-slate-300 ml-1">
+                            📜 冒險戰鬥日誌 (Terminal Output)
+                        </h3>
+                    </div>
+                    <span class="text-xs text-slate-500">即時同步 Python 執行輸出</span>
+                </div>
+                <div id="battleLogContainer" class="font-mono-code text-xs sm:text-sm bg-slate-950/90 rounded-xl p-4 h-48 overflow-y-auto space-y-2 border border-slate-800 text-slate-300">
+                    <!-- 戰鬥紀錄會自動附加在這裡 -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="w-full max-w-4xl text-center text-xs text-slate-500 mt-8 pb-2">
+        Python 程式設計教學互動網頁 • 改編自「練習03_與電腦猜拳.py」
+    </footer>
+
+    <!-- ==========================================
+         彈窗：原始 Python 題目與參考解答對照
+         ========================================== -->
+    <div id="codeModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/50 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
+            <!-- 彈窗標題列 -->
+            <div class="flex items-center justify-between px-5 py-4 bg-slate-950 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🐍</span>
+                    <h3 class="font-bold text-base sm:text-lg text-cyan-300">練習03_與電腦猜拳.py — 題目與參考解答</h3>
+                </div>
+                <button id="closeCodeModalBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 分頁切換與複製按鈕 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3 bg-slate-900/90 border-b border-slate-800">
+                <div class="flex gap-2">
+                    <button id="tabSolutionBtn" class="px-4 py-1.5 rounded-lg text-sm font-bold bg-amber-500 text-slate-950 transition cursor-pointer">
+                        ✅ 完整參考解答
+                    </button>
+                    <button id="tabOriginalBtn" class="px-4 py-1.5 rounded-lg text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition cursor-pointer">
+                        📝 原始填空題目
+                    </button>
+                </div>
+                <button id="copyCodeBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/40 transition cursor-pointer">
+                    📋 複製程式碼
+                </button>
+            </div>
+
+            <!-- 程式碼顯示區 -->
+            <div class="p-5 overflow-y-auto flex-grow bg-slate-950">
+                <pre id="codeDisplayArea" class="font-mono-code text-xs sm:text-sm text-emerald-300 leading-relaxed whitespace-pre-wrap"></pre>
+            </div>
+
+            <!-- 彈窗底部重點提示 -->
+            <div class="px-5 py-3 bg-slate-900 border-t border-slate-800 text-xs text-slate-400 flex flex-wrap justify-between gap-2">
+                <span>💡 重點語法：<code class="text-amber-300">while</code> 迴圈、<code class="text-amber-300">random.choice()</code>、<code class="text-amber-300">if / elif / else</code> 條件判斷</span>
+                <button id="closeCodeModalFooterBtn" class="text-cyan-400 hover:underline font-semibold">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         JavaScript 遊戲核心邏輯
+         ========================================== -->
+    <script>
+        // 1. 遊戲狀態變數 (對應 Python 變數)
+        const gameState = {
+            name: "",
+            equipment: "",
+            player_wins: 0,
+            computer_wins: 0,
+            round_num: 1,
+            options: ["剪刀", "石頭", "布"],
+            isGameOver: false,
+            isAnimating: false
+        };
+
+        // 拳種對應 Emoji
+        const handEmojis = {
+            "剪刀": "✌️",
+            "石頭": "✊",
+            "布": "✋"
+        };
+
+        // 原始題目與參考解答文字內容
+        const originalPythonCode = `# ==========================================
+# Python 猜拳遊戲：請在「你的程式碼」下方完成填空
+# ==========================================
+
+# 1. 冒險者登入
+# ✏️ 你的程式碼：請使用 input() 詢問「請輸入你的冒險者名字：」，並存放到變數 name 中
+name = 
+
+# ✏️ 你的程式碼：請使用 input() 詢問「請選擇你的使用裝備（例如：黃金鍵盤、魔法魔杖）：」，並存放到變數 equipment 中
+equipment = 
+
+# 印出前置劇情 (此段不需修改)
+print("\\n=== 系統廣播 ===")
+print(f"歡迎勇敢的冒險者【{name}】！")
+print(f"你已經裝備了【{equipment}】，準備好迎接第一關的 【猜拳】 挑戰！")
+
+
+import random  # 召喚處理「隨機」的魔法模組
+
+print("\\n\\n=== ✊✋✌️ 剪刀石頭布 終極大對決 ===")
+print("規則：先獲得 3 勝的一方就是最終贏家！\\n")
+
+# 戰鬥前置作業：設定變數來記錄雙方的勝場數與回合數
+player_wins = 0
+computer_wins = 0
+round_num = 1
+
+# 設定電腦可以出的拳
+options = ["剪刀", "石頭", "布"]
+
+# 2. 迴圈條件設定
+# ✏️ 你的程式碼：只要玩家和電腦的勝場「都小於 3」，遊戲就繼續 (提示：使用 < 搭配 and)
+while _________________________________:
+    print(f"--- 第 {round_num} 回合 ---")
+    print(f"🏆 目前戰況 - 你：{player_wins} 勝 | 電腦：{computer_wins} 勝")
+
+    # 3. 玩家出拳
+    # ✏️ 你的程式碼：使用 input() 詢問「請出拳 (輸入 剪刀、石頭 或 布)：」，存入 player_choice
+    player_choice = 
+
+    # 檢查玩家是否輸入錯誤 (此段不需修改)
+    if player_choice != "剪刀" and player_choice != "石頭" and player_choice != "布":
+        print("⚠️ 哎呀！指令錯誤，請輸入 剪刀、石頭 或 布。\\n")
+        continue  # 直接重新開始新的一回合
+
+    # 4. 電腦隨機出拳
+    # ✏️ 你的程式碼：使用 random.choice() 從 options 串列中隨機挑選一個，存入 computer_choice
+    computer_choice = 
+
+    print(f"🤖 電腦出了：{computer_choice}")
+
+    # 5. 勝負判斷
+    # ✏️ 你的程式碼：如果 玩家出拳「等於」電腦出拳，代表平手 (提示：使用 ==)
+    if ________________________________:
+        print("平手！沒有人得分。\\n")
+    elif (player_choice == "剪刀" and computer_choice == "布") or \\
+         (player_choice == "石頭" and computer_choice == "剪刀") or \\
+         (player_choice == "布" and computer_choice == "石頭"):
+        print("🎉 這回合你贏了！\\n")
+        # ✏️ 你的程式碼：請將 玩家勝場數 (player_wins) 加 1
+        player_wins = 
+    else:
+        print("💥 這回合電腦贏了！\\n")
+        # ✏️ 你的程式碼：請將 電腦勝場數 (computer_wins) 加 1
+        computer_wins = 
+
+    round_num = round_num + 1
+
+
+# 6. 最終結算
+print("=== 🌟 最終結果 🌟 ===")
+# ✏️ 你的程式碼：如果 玩家勝場數「等於」3，印出玩家勝利的訊息
+if ________________________________:
+    print(f"🏆 恭喜你以 {player_wins} : {computer_wins} 擊敗了電腦，成為剪刀石頭布大師！")
+else:
+    print(f"💻 很可惜，電腦以 {computer_wins} : {player_wins} 獲得了最終勝利，下次再來挑戰吧！")`;
+
+        const solutionPythonCode = `# ==========================================
+# Python 猜拳遊戲：【完整參考解答】
+# ==========================================
+
+# 1. 冒險者登入
+name = input("請輸入你的冒險者名字：")
+equipment = input("請選擇你的使用裝備（例如：黃金鍵盤、魔法魔杖）：")
+
+# 印出前置劇情
+print("\\n=== 系統廣播 ===")
+print(f"歡迎勇敢的冒險者【{name}】！")
+print(f"你已經裝備了【{equipment}】，準備好迎接第一關的 【猜拳】 挑戰！")
+
+
+import random  # 召喚處理「隨機」的魔法模組
+
+print("\\n\\n=== ✊✋✌️ 剪刀石頭布 終極大對決 ===")
+print("規則：先獲得 3 勝的一方就是最終贏家！\\n")
+
+# 戰鬥前置作業：設定變數來記錄雙方的勝場數與回合數
+player_wins = 0
+computer_wins = 0
+round_num = 1
+
+# 設定電腦可以出的拳
+options = ["剪刀", "石頭", "布"]
+
+# 2. 迴圈條件設定：只要玩家和電腦的勝場都小於 3，遊戲就繼續
+while player_wins < 3 and computer_wins < 3:
+    print(f"--- 第 {round_num} 回合 ---")
+    print(f"🏆 目前戰況 - 你：{player_wins} 勝 | 電腦：{computer_wins} 勝")
+
+    # 3. 玩家出拳
+    player_choice = input("請出拳 (輸入 剪刀、石頭 或 布)：")
+
+    # 檢查玩家是否輸入錯誤
+    if player_choice != "剪刀" and player_choice != "石頭" and player_choice != "布":
+        print("⚠️ 哎呀！指令錯誤，請輸入 剪刀、石頭 或 布。\\n")
+        continue
+
+    # 4. 電腦隨機出拳
+    computer_choice = random.choice(options)
+
+    print(f"🤖 電腦出了：{computer_choice}")
+
+    # 5. 勝負判斷
+    if player_choice == computer_choice:
+        print("平手！沒有人得分。\\n")
+    elif (player_choice == "剪刀" and computer_choice == "布") or \\
+         (player_choice == "石頭" and computer_choice == "剪刀") or \\
+         (player_choice == "布" and computer_choice == "石頭"):
+        print("🎉 這回合你贏了！\\n")
+        player_wins = player_wins + 1  # 也可以寫成 player_wins += 1
+    else:
+        print("💥 這回合電腦贏了！\\n")
+        computer_wins = computer_wins + 1  # 也可以寫成 computer_wins += 1
+
+    round_num = round_num + 1
+
+
+# 6. 最終結算
+print("=== 🌟 最終結果 🌟 ===")
+if player_wins == 3:
+    print(f"🏆 恭喜你以 {player_wins} : {computer_wins} 擊敗了電腦，成為剪刀石頭布大師！")
+else:
+    print(f"💻 很可惜，電腦以 {computer_wins} : {player_wins} 獲得了最終勝利，下次再來挑戰吧！")`;
+
+        // 2. DOM 元素綁定
+        const stageLogin = document.getElementById('stageLogin');
+        const stageBattle = document.getElementById('stageBattle');
+        const loginForm = document.getElementById('loginForm');
+        const adventurerNameInput = document.getElementById('adventurerName');
+        const adventurerEquipmentInput = document.getElementById('adventurerEquipment');
+        const loginErrorMsg = document.getElementById('loginErrorMsg');
+        const loginErrorText = document.getElementById('loginErrorText');
+
+        const broadcastMessage = document.getElementById('broadcastMessage');
+        const roundDisplay = document.getElementById('roundDisplay');
+        const scoreboardName = document.getElementById('scoreboardName');
+        const arenaPlayerLabel = document.getElementById('arenaPlayerLabel');
+        const playerWinsDisplay = document.getElementById('playerWinsDisplay');
+        const computerWinsDisplay = document.getElementById('computerWinsDisplay');
+
+        const playerHandBox = document.getElementById('playerHandBox');
+        const playerHandText = document.getElementById('playerHandText');
+        const computerHandBox = document.getElementById('computerHandBox');
+        const computerHandText = document.getElementById('computerHandText');
+        const roundResultBadge = document.getElementById('roundResultBadge');
+
+        const actionButtonsArea = document.getElementById('actionButtonsArea');
+        const rpsButtons = document.querySelectorAll('.rps-btn');
+        const finalResultArea = document.getElementById('finalResultArea');
+        const finalResultMessage = document.getElementById('finalResultMessage');
+        const battleLogContainer = document.getElementById('battleLogContainer');
+
+        // 3. 輔助函式：寫入戰鬥日誌
+        function appendLog(htmlContent, borderClass = "border-slate-800") {
+            const entry = document.createElement('div');
+            entry.className = `pb-1.5 border-b ${borderClass} leading-relaxed animate-fade-in`;
+            entry.innerHTML = htmlContent;
+            battleLogContainer.appendChild(entry);
+            battleLogContainer.scrollTop = battleLogContainer.scrollHeight;
+        }
+
+        // 4. 快速裝備按鈕點擊事件
+        document.querySelectorAll('.quick-equip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 去除前面的 emoji 與空白
+                const text = btn.textContent.replace(/^[^\u4e00-\u9fa5]+/, '').trim();
+                adventurerEquipmentInput.value = text;
+                loginErrorMsg.classList.add('hidden');
+            });
+        });
+
+        // 5. 階段一：冒險者登入提交
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nameVal = adventurerNameInput.value.trim();
+            const equipVal = adventurerEquipmentInput.value.trim();
+
+            if (!nameVal || !equipVal) {
+                loginErrorText.textContent = !nameVal && !equipVal
+                    ? "⚠️ 請輸入你的冒險者名字與使用裝備！"
+                    : (!nameVal ? "⚠️ 請輸入你的冒險者名字！" : "⚠️ 請選擇或輸入你的使用裝備！");
+                loginErrorMsg.classList.remove('hidden');
+                return;
+            }
+
+            loginErrorMsg.classList.add('hidden');
+            gameState.name = nameVal;
+            gameState.equipment = equipVal;
+
+            startAdventure();
+        });
+
+        // 6. 初始化並進入階段二對決
+        function startAdventure() {
+            // 重置分數與狀態
+            gameState.player_wins = 0;
+            gameState.computer_wins = 0;
+            gameState.round_num = 1;
+            gameState.isGameOver = false;
+            gameState.isAnimating = false;
+
+            // 更新系統廣播與角色名稱
+            broadcastMessage.innerHTML = `
+                歡迎勇敢的冒險者<span class="font-bold text-amber-300">【${escapeHTML(gameState.name)}】</span>！<br>
+                你已經裝備了<span class="font-bold text-cyan-300">【${escapeHTML(gameState.equipment)}】</span>，準備好迎接第一關的 <span class="font-bold text-amber-300">【猜拳】</span> 挑戰！
+            `;
+            scoreboardName.textContent = gameState.name;
+            arenaPlayerLabel.textContent = `🛡️ ${gameState.name}`;
+
+            // 切換畫面
+            stageLogin.classList.add('hidden');
+            stageBattle.classList.remove('hidden');
+
+            // 初始化 UI 顯示
+            resetArenaVisuals();
+            updateScoreboard();
+
+            // 清空並寫入初始終端機日誌
+            battleLogContainer.innerHTML = "";
+            appendLog(`<span class="text-cyan-400">=== 系統廣播 ===</span><br>歡迎勇敢的冒險者【${escapeHTML(gameState.name)}】！<br>你已經裝備了【${escapeHTML(gameState.equipment)}】，準備好迎接第一關的 【猜拳】 挑戰！`);
+            appendLog(`<span class="text-amber-300">=== ✊✋✌️ 剪刀石頭布 終極大對決 ===</span><br>規則：先獲得 3 勝的一方就是最終贏家！`);
+        }
+
+        function resetArenaVisuals() {
+            playerHandBox.textContent = "❓";
+            playerHandText.textContent = "等待出拳";
+            computerHandBox.textContent = "🤖";
+            computerHandText.textContent = "蓄勢待發";
+            roundResultBadge.className = "mt-3 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 text-slate-300 min-h-[36px] flex items-center justify-center";
+            roundResultBadge.textContent = "請選擇下方招式！";
+
+            actionButtonsArea.classList.remove('hidden');
+            finalResultArea.classList.add('hidden');
+            rpsButtons.forEach(btn => btn.disabled = false);
+        }
+
+        function updateScoreboard() {
+            roundDisplay.textContent = gameState.round_num;
+            playerWinsDisplay.textContent = gameState.player_wins;
+            computerWinsDisplay.textContent = gameState.computer_wins;
+        }
+
+        // 7. 處理玩家出拳與回合運算
+        rpsButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (gameState.isGameOver || gameState.isAnimating) return;
+
+                const playerChoice = btn.getAttribute('data-choice');
+                playRound(playerChoice);
+            });
+        });
+
+        function playRound(playerChoice) {
+            gameState.isAnimating = true;
+            rpsButtons.forEach(btn => btn.disabled = true);
+
+            // 紀錄當前回合開頭日誌
+            const currentRound = gameState.round_num;
+            const prevPlayerWins = gameState.player_wins;
+            const prevComputerWins = gameState.computer_wins;
+
+            // 動畫準備階段
+            playerHandBox.textContent = "✊";
+            computerHandBox.textContent = "✊";
+            playerHandText.textContent = "出拳中...";
+            computerHandText.textContent = "思考中...";
+            roundResultBadge.className = "mt-3 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-amber-500/20 text-amber-300 min-h-[36px] flex items-center justify-center";
+            roundResultBadge.textContent = "剪刀、石頭、布...";
+
+            playerHandBox.classList.add('animate-shake');
+            computerHandBox.classList.add('animate-shake');
+
+            setTimeout(() => {
+                playerHandBox.classList.remove('animate-shake');
+                computerHandBox.classList.remove('animate-shake');
+
+                // 4. 電腦隨機出拳 (對應 random.choice(options))
+                const randomIndex = Math.floor(Math.random() * gameState.options.length);
+                const computerChoice = gameState.options[randomIndex];
+
+                // 更新雙方出拳圖示
+                playerHandBox.textContent = handEmojis[playerChoice];
+                playerHandText.textContent = `你出了：${playerChoice}`;
+                computerHandBox.textContent = handEmojis[computerChoice];
+                computerHandText.textContent = `電腦出了：${computerChoice}`;
+
+                let roundOutcomeText = "";
+                let badgeClass = "";
+
+                // 5. 勝負判斷 (完全對應 Python if / elif / else 邏輯)
+                if (playerChoice === computerChoice) {
+                    roundOutcomeText = "平手！沒有人得分。";
+                    badgeClass = "bg-slate-700 text-slate-200";
+                } else if (
+                    (playerChoice === "剪刀" && computerChoice === "布") ||
+                    (playerChoice === "石頭" && computerChoice === "剪刀") ||
+                    (playerChoice === "布" && computerChoice === "石頭")
+                ) {
+                    roundOutcomeText = "🎉 這回合你贏了！";
+                    badgeClass = "bg-emerald-500/25 border border-emerald-400/50 text-emerald-300";
+                    gameState.player_wins += 1;
+                } else {
+                    roundOutcomeText = "💥 這回合電腦贏了！";
+                    badgeClass = "bg-rose-500/25 border border-rose-400/50 text-rose-300";
+                    gameState.computer_wins += 1;
+                }
+
+                // 更新結果徽章
+                roundResultBadge.className = `mt-3 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold min-h-[36px] flex items-center justify-center ${badgeClass}`;
+                roundResultBadge.textContent = roundOutcomeText;
+
+                // 寫入終端機戰鬥日誌
+                appendLog(`
+                    <div class="text-slate-400">--- 第 ${currentRound} 回合 ---</div>
+                    <div class="text-xs text-slate-500">🏆 戰前比數 - 你：${prevPlayerWins} 勝 | 電腦：${prevComputerWins} 勝</div>
+                    <div>👉 你出了：<span class="text-cyan-300 font-bold">${playerChoice}</span> ｜ 🤖 電腦出了：<span class="text-rose-300 font-bold">${computerChoice}</span></div>
+                    <div class="font-bold text-amber-200 mt-0.5">${roundOutcomeText}</div>
+                `);
+
+                // 檢查 while player_wins < 3 and computer_wins < 3 條件是否結束
+                if (gameState.player_wins < 3 && gameState.computer_wins < 3) {
+                    gameState.round_num += 1;
+                    updateScoreboard();
+                    gameState.isAnimating = false;
+                    rpsButtons.forEach(btn => btn.disabled = false);
+                } else {
+                    // 更新最終比數並進入階段三結算
+                    playerWinsDisplay.textContent = gameState.player_wins;
+                    computerWinsDisplay.textContent = gameState.computer_wins;
+                    finishGame();
+                }
+            }, 460);
+        }
+
+        // 8. 階段三：最終結算
+        function finishGame() {
+            gameState.isGameOver = true;
+            gameState.isAnimating = false;
+
+            actionButtonsArea.classList.add('hidden');
+            finalResultArea.classList.remove('hidden');
+
+            let finalMsg = "";
+            if (gameState.player_wins === 3) {
+                finalMsg = `🏆 恭喜你以 <span class="text-amber-300 text-2xl">${gameState.player_wins} : ${gameState.computer_wins}</span> 擊敗了電腦，成為剪刀石頭布大師！`;
+                finalResultArea.className = "mt-6 p-6 rounded-2xl bg-gradient-to-b from-amber-950/50 to-slate-950 border-2 border-amber-400 text-center space-y-4 animate-fade-in shadow-xl shadow-amber-500/10";
+            } else {
+                finalMsg = `💻 很可惜，電腦以 <span class="text-rose-400 text-2xl">${gameState.computer_wins} : ${gameState.player_wins}</span> 獲得了最終勝利，下次再來挑戰吧！`;
+                finalResultArea.className = "mt-6 p-6 rounded-2xl bg-gradient-to-b from-rose-950/40 to-slate-950 border-2 border-rose-500/70 text-center space-y-4 animate-fade-in shadow-xl shadow-rose-500/10";
+            }
+
+            finalResultMessage.innerHTML = finalMsg;
+
+            // 寫入終端機最終結算日誌
+            const plainFinalMsg = gameState.player_wins === 3
+                ? `🏆 恭喜你以 ${gameState.player_wins} : ${gameState.computer_wins} 擊敗了電腦，成為剪刀石頭布大師！`
+                : `💻 很可惜，電腦以 ${gameState.computer_wins} : ${gameState.player_wins} 獲得了最終勝利，下次再來挑戰吧！`;
+
+            appendLog(`
+                <div class="text-amber-300 font-bold mt-1">=== 🌟 最終結果 🌟 ===</div>
+                <div class="text-white font-bold">${plainFinalMsg}</div>
+            `, "border-amber-500/40");
+        }
+
+        // 重新挑戰（保留角色）
+        document.getElementById('restartSamePlayerBtn').addEventListener('click', () => {
+            startAdventure();
+        });
+
+        // 重新設定冒險者資料
+        document.getElementById('resetAllBtn').addEventListener('click', () => {
+            stageBattle.classList.add('hidden');
+            stageLogin.classList.remove('hidden');
+            adventurerNameInput.focus();
+        });
+
+        // 9. Python 題目與解答彈窗控制邏輯
+        const codeModal = document.getElementById('codeModal');
+        const codeDisplayArea = document.getElementById('codeDisplayArea');
+        const tabSolutionBtn = document.getElementById('tabSolutionBtn');
+        const tabOriginalBtn = document.getElementById('tabOriginalBtn');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+
+        let currentCodeTab = 'solution';
+
+        function renderCodeTab() {
+            if (currentCodeTab === 'solution') {
+                codeDisplayArea.textContent = solutionPythonCode;
+                codeDisplayArea.className = "font-mono-code text-xs sm:text-sm text-emerald-300 leading-relaxed whitespace-pre-wrap";
+                tabSolutionBtn.className = "px-4 py-1.5 rounded-lg text-sm font-bold bg-amber-500 text-slate-950 transition cursor-pointer";
+                tabOriginalBtn.className = "px-4 py-1.5 rounded-lg text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
+            } else {
+                codeDisplayArea.textContent = originalPythonCode;
+                codeDisplayArea.className = "font-mono-code text-xs sm:text-sm text-cyan-200 leading-relaxed whitespace-pre-wrap";
+                tabOriginalBtn.className = "px-4 py-1.5 rounded-lg text-sm font-bold bg-amber-500 text-slate-950 transition cursor-pointer";
+                tabSolutionBtn.className = "px-4 py-1.5 rounded-lg text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition cursor-pointer";
+            }
+        }
+
+        document.getElementById('openCodeModalBtn').addEventListener('click', () => {
+            renderCodeTab();
+            codeModal.classList.remove('hidden');
+        });
+
+        document.getElementById('closeCodeModalBtn').addEventListener('click', () => {
+            codeModal.classList.add('hidden');
+        });
+
+        document.getElementById('closeCodeModalFooterBtn').addEventListener('click', () => {
+            codeModal.classList.add('hidden');
+        });
+
+        codeModal.addEventListener('click', (e) => {
+            if (e.target === codeModal) {
+                codeModal.classList.add('hidden');
+            }
+        });
+
+        tabSolutionBtn.addEventListener('click', () => {
+            currentCodeTab = 'solution';
+            renderCodeTab();
+        });
+
+        tabOriginalBtn.addEventListener('click', () => {
+            currentCodeTab = 'original';
+            renderCodeTab();
+        });
+
+        // 複製程式碼功能 (使用 execCommand 相容 iFrame 環境)
+        copyCodeBtn.addEventListener('click', () => {
+            const textToCopy = currentCodeTab === 'solution' ? solutionPythonCode : originalPythonCode;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            try {
+                document.execCommand('copy');
+                const originalLabel = copyCodeBtn.textContent;
+                copyCodeBtn.textContent = "✅ 已複製到剪貼簿！";
+                setTimeout(() => {
+                    copyCodeBtn.textContent = originalLabel;
+                }, 2000);
+            } catch (err) {
+                console.error('複製失敗', err);
+            }
+            document.body.removeChild(tempTextArea);
+        });
+
+        // 防止 XSS 跳脫字元
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+    </script>
+</body>
+</html>
